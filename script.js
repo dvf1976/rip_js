@@ -1,6 +1,6 @@
 'use strict';
 
-var DISC_IMAGES_DIRECTORY = '/mnt/disc_images/',
+var DISC_IMAGES_DIRECTORY = '/mnt/local_disc_images/',
     path = require('path'),
     argv = require('minimist')(process.argv.slice(2)),
     fs = require('fs'),
@@ -36,18 +36,17 @@ if (!fs.existsSync(inputFileLocation)) {
     return;
 }
 
-function runHandbrake(isoPath) {
+function runHandbrake(inputLocation, outputLocation) {
     var hbjs = require('handbrake-js'),
         pace = require('pace'),
-        progressbar = pace(100),
-        isoFileName = path.basename(isoPath);
+        progressbar = pace(100);
 
-    console.log('path: ' + isoPath);
-    console.log('isoFileName: ' + isoFileName);
+    console.log('input path: ' + inputLocation);
+    console.log('output path: ' + outputLocation);
 
     hbjs.spawn({
-        input : inputFileLocation,
-        output : outputFileName,
+        input : inputLocation,
+        output : outputLocation,
         encoder : 'x265',
         quality : '24.0',
         aencoder : 'av_aac',
@@ -63,11 +62,7 @@ function runHandbrake(isoPath) {
     });
 }
 
-function processISO(isoPath) {
-    if (!_.includes(ISOS_TO_PROCESS, isoPath)) {
-        runHandbrake(isoPath);
-    }
-}
+runHandbrake(inputFileLocation, outputFileName);
 
 //watcher.on('add', processISO);
 
