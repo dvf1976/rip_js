@@ -9,7 +9,10 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "chokidar": "^1.6.1",
     "handbrake-js": "^2.1.0",
+    "lodash": "^4.17.4",
+    "minimist": "^1.2.0",
     "pace": "0.0.4"
   }
 }
