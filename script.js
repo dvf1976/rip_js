@@ -52,6 +52,10 @@ function runHandbrake(inputLocation, outputLocation) {
         aencoder : 'av_aac',
         'custom-anamorphic' : true,
         'keep-display-aspect' : true,
+        'main-feature' : true,
+        'subtitle' : 'scan',
+        'subtitle-forced' : '1',
+        'subtitle-burn' : '1',
         rate : '29.97'
     }).on('error', function (err) {
         console.log('error: ' + err);
