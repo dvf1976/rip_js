@@ -1,6 +1,7 @@
 'use strict';
 
 var DISC_IMAGES_DIRECTORY = '/mnt/local_disc_images/',
+    VIDEO_DIRECTORY = '/mnt/roku_videos/',
     path = require('path'),
     argv = require('minimist')(process.argv.slice(2)),
     fs = require('fs'),
@@ -31,8 +32,14 @@ if (!outputFileName.endsWith('.m4v')) {
     outputFileName += '.m4v';
 }
 
+outputFileLocation = VIDEO_DIRECTORY + outputFileName;
+
 if (!fs.existsSync(inputFileLocation)) {
     console.log('no file at: ' + inputFileLocation);
+    return;
+}
+if (fs.existsSync(outputFileLocation)) {
+    console.log('file already exists at: ' + outputFileLocation);
     return;
 }
 
@@ -66,7 +73,7 @@ function runHandbrake(inputLocation, outputLocation) {
     });
 }
 
-runHandbrake(inputFileLocation, outputFileName);
+runHandbrake(inputFileLocation, outputFileLocation);
 
 //watcher.on('add', processISO);
 
