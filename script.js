@@ -15,9 +15,7 @@ var DISC_IMAGES_DIRECTORY = '/mnt/local_disc_images/',
     inputFileName = argv.input || argv.disc || argv.bluray || argv.iso || argv.inputFileName,
     outputFileName = argv.output || argv.outputFileName,
     inputFileLocation = DISC_IMAGES_DIRECTORY + inputFileName,
-    ISOS_TO_PROCESS = [
-        DISC_IMAGES_DIRECTORY + 'Zoolander.iso'
-    ];
+    outputFileLocation = '';
 
 if (!inputFileName) {
     console.log('must pass --input or --disc or --bluray or --iso or --inputFileName');
