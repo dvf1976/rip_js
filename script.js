@@ -1,17 +1,16 @@
 'use strict';
 
-var DISC_IMAGES_DIRECTORY = '/mnt/local_disc_images/',
+//var DISC_IMAGES_DIRECTORY = '/mnt/local_disc_images/',
+//    VIDEO_DIRECTORY = '/mnt/roku_videos/',
+var DISC_IMAGES_DIRECTORY = '/data/',
+    BACKUP_DIRECTORY1 = '/mnt/sdb/',
+    BACKUP_DIRECTORY2 = '/mnt/sdc/',
     VIDEO_DIRECTORY = '/mnt/roku_videos/',
     path = require('path'),
     argv = require('minimist')(process.argv.slice(2)),
     fs = require('fs'),
-    /*
-    chokidar = require('chokidar'),
-    watcher = chokidar.watch(DISC_IMAGES_DIRECTORY + '*.iso', {
-        persistent : true
-    }),
-    */
     _ = require('lodash'),
+    Set = require('collections/set'),
     inputFileName = argv.input || argv.disc || argv.bluray || argv.iso || argv.inputFileName,
     outputFileName = argv.output || argv.outputFileName,
     inputFileLocation = DISC_IMAGES_DIRECTORY + inputFileName,
@@ -43,8 +42,7 @@ if (fs.existsSync(outputFileLocation)) {
 
 function runHandbrake(inputLocation, outputLocation) {
     var hbjs = require('handbrake-js'),
-        pace = require('pace'),
-        progressbar = pace(100);
+        progressbar = require('progressbar').create().step('Encoding ' + outputLocation).setTotal(100);
 
     console.log('input path: ' + inputLocation);
     console.log('output path: ' + outputLocation);
@@ -67,9 +65,66 @@ function runHandbrake(inputLocation, outputLocation) {
     }).on('output', function (output) {
         // console.log('output: ' + output);
     }).on('progress', function (progress) {
-        progressbar.op(progress.percentComplete);
+        progressbar.setTick(progress.percentComplete);
     });
 }
+
+function copyFile(source, target, cb) {
+    var cbCalled = false,
+        readStream = fs.createReadStream(source),
+        writeStream = fs.createWriteStream(target),
+        stat = fs.statSync(source),
+        fileSize = stat.size,
+        progressbar = require('progressbar').create().step('Copying ' + source + ' to ' + target).setTotal(100),
+        bytesCopied = 0,
+        milestones = new Set(_.range(100));
+
+    function done(err) {
+        if (!cbCalled) {
+            cb && cb(err);
+            cbCalled = true;
+        }
+    }
+
+    writeStream.on("error", function(err) {
+        done(err);
+    });
+
+    writeStream.on("close", function(ex) {
+        readStream.close();
+        progressbar.finish();
+        done();
+    });
+
+    readStream.on("error", function(err) {
+        done(err);
+    });
+
+    readStream.on('end', function () {
+        writeStream.close();
+    });
+
+    readStream.on('data', function (buffer) {
+        var length = buffer.length,
+        percentComplete;
+
+        bytesCopied += length,
+        percentComplete = ((bytesCopied / fileSize) * 100).toFixed(2);
+
+        milestones.forEach(milestone => {
+            if (percentComplete >= milestone) {
+                progressbar.setTick(percentComplete);
+                milestones.remove(milestone);
+            };
+        });
+
+        writeStream.write(buffer);
+    });
+}
+
+copyFile(inputFileLocation, BACKUP_DIRECTORY1 + inputFileName, (err) => {
+	copyFile(inputFileLocation, BACKUP_DIRECTORY2 + inputFileName, () => {});
+});
 
 runHandbrake(inputFileLocation, outputFileLocation);
 
