@@ -1,8 +1,6 @@
 'use strict';
 
-//var DISC_IMAGES_DIRECTORY = '/mnt/local_disc_images/',
-//    VIDEO_DIRECTORY = '/mnt/roku_videos/',
-var DISC_IMAGES_DIRECTORY = '/data/',
+var DISC_IMAGES_DIRECTORY = '/mnt/local_disc_images/',
     BACKUP_DIRECTORY1 = '/mnt/sdb/',
     BACKUP_DIRECTORY2 = '/mnt/sdc/',
     VIDEO_DIRECTORY = '/mnt/roku_videos/',
@@ -11,20 +9,29 @@ var DISC_IMAGES_DIRECTORY = '/data/',
     fs = require('fs'),
     _ = require('lodash'),
     Set = require('collections/set'),
-    inputFileName = argv.input || argv.disc || argv.bluray || argv.iso || argv.inputFileName,
-    outputFileName = argv.output || argv.outputFileName,
+    inputFileName = checkInputFileName(argv.input || argv.disc || argv.bluray || argv.iso || argv.inputFileName),
+    dotDVDFileName = inputFileName.replace('.iso', '.dvd'),
+    dotMD5FileName = inputFileName.replace('.iso', '.md5'),
+    outputFileName = checkOutputFileName(argv.output || argv.outputFileName),
     inputFileLocation = DISC_IMAGES_DIRECTORY + inputFileName,
+    dotDVDFileLocation = DISC_IMAGES_DIRECTORY + dotDVDFileName,
+    dotMD5FileLocation = DISC_IMAGES_DIRECTORY + dotMD5FileName,
     outputFileLocation = '';
 
-if (!inputFileName) {
-    console.log('must pass --input or --disc or --bluray or --iso or --inputFileName');
-    return;
+function checkInputFileName(f) {
+    if (!f) {
+        throw new Error('must pass --input or --disc or --bluray or --iso or --inputFileName');
+    }
+    return f;
 }
 
-if (!outputFileName) {
-    console.log('must pass --output or --outputFileName');
-    return;
+function checkOutputFileName(f) {
+    if (!f) {
+        throw new Error('must pass --output or --outputFileName');
+    }
+    return f;
 }
+
 if (!outputFileName.endsWith('.m4v')) {
     outputFileName += '.m4v';
 }
@@ -75,7 +82,8 @@ function copyFile(source, target, cb) {
         writeStream = fs.createWriteStream(target),
         stat = fs.statSync(source),
         fileSize = stat.size,
-        progressbar = require('progressbar').create().step('Copying ' + source + ' to ' + target).setTotal(100),
+        sourceBaseName = source.split('/').reverse()[0],
+        progressbar = require('progressbar').create().step('Copying ' + sourceBaseName + ' to ' + target).setTotal(100),
         bytesCopied = 0,
         milestones = new Set(_.range(100));
 
@@ -118,15 +126,49 @@ function copyFile(source, target, cb) {
             };
         });
 
-        writeStream.write(buffer);
+        readStream.pipe(writeStream);
     });
 }
 
-copyFile(inputFileLocation, BACKUP_DIRECTORY1 + inputFileName, (err) => {
-	copyFile(inputFileLocation, BACKUP_DIRECTORY2 + inputFileName, () => {});
+// UGH. Need to rewrite as promises!
+copyFile(dotMD5FileLocation, BACKUP_DIRECTORY1 + dotMD5FileName, (err) => {
+    if (err) {
+        console.log('err: ' + err);
+        return;
+    }
+    copyFile(dotMD5FileLocation, BACKUP_DIRECTORY2 + dotMD5FileName, (err) => {
+        if (err) {
+            console.log('err: ' + err);
+            return;
+        }
+        copyFile(dotDVDFileLocation, BACKUP_DIRECTORY1 + dotDVDFileName, (err) => {
+            if (err) {
+                console.log('err: ' + err);
+                return;
+            }
+            copyFile(dotDVDFileLocation, BACKUP_DIRECTORY2 + dotDVDFileName, (err) => {
+                if (err) {
+                    console.log('err: ' + err);
+                    return;
+                }
+                copyFile(inputFileLocation, BACKUP_DIRECTORY1 + inputFileName, (err) => {
+                    if (err) {
+                        console.log('err: ' + err);
+                        return;
+                    }
+                    copyFile(inputFileLocation, BACKUP_DIRECTORY2 + inputFileName, () => {
+                        if (err) {
+                            console.log('err: ' + err);
+                            return;
+                        }
+                        runHandbrake(inputFileLocation, outputFileLocation);
+                    });
+                });
+            });
+        });
+    });
 });
 
-runHandbrake(inputFileLocation, outputFileLocation);
 
 //watcher.on('add', processISO);
 
