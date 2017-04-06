@@ -10,7 +10,6 @@
   "license": "ISC",
   "dependencies": {
     "awesome-progress": "0.0.6",
-    "chokidar": "^1.6.1",
     "collections": "^5.0.6",
     "config": "^1.25.1",
     "handbrake-js": "^2.1.0",
