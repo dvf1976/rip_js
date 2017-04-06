@@ -1,9 +1,10 @@
 'use strict';
 
-var DISC_IMAGES_DIRECTORY = '/mnt/local_disc_images/',
-    BACKUP_DIRECTORY1 = '/mnt/sdb/',
-    BACKUP_DIRECTORY2 = '/mnt/sdc/',
-    VIDEO_DIRECTORY = '/mnt/roku_videos/',
+var config = require('config'),
+    DISC_IMAGES_DIRECTORY = config.get('DISC_IMAGES_DIRECTORY'),
+    BACKUP_DIRECTORY1 = config.get('BACKUP_DIRECTORY1'),
+    BACKUP_DIRECTORY2 = config.get('BACKUP_DIRECTORY2'),
+    VIDEO_DIRECTORY = config.get('VIDEO_DIRECTORY'),
     path = require('path'),
     argv = require('minimist')(process.argv.slice(2)),
     fs = require('fs'),
@@ -19,6 +20,7 @@ var DISC_IMAGES_DIRECTORY = '/mnt/local_disc_images/',
     outputFileLocation = '';
 
 function checkInputFileName(f) {
+    console.log(DISC_IMAGES_DIRECTORY);
     if (!f) {
         throw new Error('must pass --input or --disc or --bluray or --iso or --inputFileName');
     }

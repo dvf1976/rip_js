@@ -1,0 +1,6 @@
+{
+    "DISC_IMAGES_DIRECTORY" : "/data/rip_js/local_disc_images/",
+    "BACKUP_DIRECTORY1" : "/data/rip_js/sdb/",
+    "BACKUP_DIRECTORY2" : "/data/rip_js/sdc/",
+    "VIDEO_DIRECTORY" : "/data/rip_js/roku_videos/"
+}
