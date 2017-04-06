@@ -38,7 +38,6 @@ if (!outputFileName.endsWith('.m4v')) {
 
 outputFileLocation = VIDEO_DIRECTORY + outputFileName;
 
-/*
 if (!fs.existsSync(inputFileLocation)) {
     console.log('no file at: ' + inputFileLocation);
     return;
@@ -47,7 +46,6 @@ if (fs.existsSync(outputFileLocation)) {
     console.log('file already exists at: ' + outputFileLocation);
     return;
 }
-*/
 
 function runHandbrake(inputLocation, outputLocation) {
     var hbjs = require('handbrake-js'),
@@ -55,8 +53,6 @@ function runHandbrake(inputLocation, outputLocation) {
 
     console.log('input path: ' + inputLocation);
     console.log('output path: ' + outputLocation);
-    
-    return;
 
     hbjs.spawn({
         input : inputLocation,
@@ -80,8 +76,7 @@ function runHandbrake(inputLocation, outputLocation) {
     });
 }
 
-/*
-function _copyFile(source, target, cb) {
+function copyFile(source, target, cb) {
     var cbCalled = false,
         readStream = fs.createReadStream(source),
         writeStream = fs.createWriteStream(target),
@@ -134,75 +129,47 @@ function _copyFile(source, target, cb) {
         readStream.pipe(writeStream);
     });
 }
-*/
 
-function copyFile(sourceLocation, destinationLocation) {
-    return new Promise(
-        (resolve, reject) => {
-            var readStream = fs.createReadStream(source),
-                writeStream = fs.createWriteStream(target),
-                stat = fs.statSync(source),
-                fileSize = stat.size,
-                sourceBaseName = source.split('/').reverse()[0],
-                progressbar = require('progressbar').create().step('Copying ' + sourceBaseName + ' to ' + target).setTotal(100),
-                bytesCopied = 0,
-                milestones = new Set(_.range(100));
-
-            writeStream.on("error", function(err) {
-                var reason = new Error(err);
-                reject(err);
-            });
-
-            writeStream.on("close", function(ex) {
-                readStream.close();
-                progressbar.finish();
-                resolve();
-            });
-
-            readStream.on("error", function(err) {
-                var reason = new Error(err);
-                reject(err);
-            });
-
-            readStream.on('end', function () {
-                writeStream.close();
-            });
-
-            readStream.on('data', function (buffer) {
-                var length = buffer.length,
-                percentComplete;
-
-                bytesCopied += length,
-                percentComplete = ((bytesCopied / fileSize) * 100).toFixed(2);
-
-                milestones.forEach(milestone => {
-                    if (percentComplete >= milestone) {
-                        progressbar.setTick(percentComplete);
-                        milestones.remove(milestone);
-                    };
-                });
-
-                readStream.pipe(writeStream);
-            });
-        }
-    );
-}
-
-var OPERATIONS = [
-    () => {return copyFile(dotMD5FileLocation, BACKUP_DIRECTORY1 + dotMD5FileName);},
-    () => {return copyFile(dotMD5FileLocation, BACKUP_DIRECTORY2 + dotMD5FileName);},
-    () => {return copyFile(dotDVDFileLocation, BACKUP_DIRECTORY1 + dotDVDFileName);},
-    () => {return copyFile(dotDVDFileLocation, BACKUP_DIRECTORY2 + dotDVDFileName);},
-    () => {return copyFile(inputFileLocation, BACKUP_DIRECTORY1 + inputFileName);},
-    () => {return copyFile(inputFileLocation, BACKUP_DIRECTORY2 + inputFileName);},
-    () => {return runHandbrake(inputFileLocation, outputFileLocation);}
-];
-
-_.map(_.reverse(OPERATIONS), function(operation, index) {
-    if (index - 1 > 0) {
-        console.log('index - 1: ' + (index - 1));
-        operation.apply().then(OPERATIONS[index + 1]);
+// UGH. Need to rewrite as promises!
+copyFile(dotMD5FileLocation, BACKUP_DIRECTORY1 + dotMD5FileName, (err) => {
+    if (err) {
+        console.log('err: ' + err);
+        return;
     }
+    copyFile(dotMD5FileLocation, BACKUP_DIRECTORY2 + dotMD5FileName, (err) => {
+        if (err) {
+            console.log('err: ' + err);
+            return;
+        }
+        copyFile(dotDVDFileLocation, BACKUP_DIRECTORY1 + dotDVDFileName, (err) => {
+            if (err) {
+                console.log('err: ' + err);
+                return;
+            }
+            copyFile(dotDVDFileLocation, BACKUP_DIRECTORY2 + dotDVDFileName, (err) => {
+                if (err) {
+                    console.log('err: ' + err);
+                    return;
+                }
+                copyFile(inputFileLocation, BACKUP_DIRECTORY1 + inputFileName, (err) => {
+                    if (err) {
+                        console.log('err: ' + err);
+                        return;
+                    }
+                    copyFile(inputFileLocation, BACKUP_DIRECTORY2 + inputFileName, () => {
+                        if (err) {
+                            console.log('err: ' + err);
+                            return;
+                        }
+                        runHandbrake(inputFileLocation, outputFileLocation);
+                    });
+                });
+            });
+        });
+    });
 });
 
-OPERATIONS[0].apply();
+
+//watcher.on('add', processISO);
+
+// my $base_handbrake_statement = '%s -i "%s" %s -o "%s" -e x265 -q 24.0 -E av_aac --custom-anamorphic --keep-display-aspect  -r 29.97 -O';
