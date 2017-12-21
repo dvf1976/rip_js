@@ -1,6 +1,5 @@
 {
-    "DISC_IMAGES_DIRECTORY" : "/run/media/dvf1976/588ABAF68ABAD02C/local_disc_images/",
-    "BACKUP_DIRECTORY1" : "/run/media/dvf1976/588ABAF68ABAD02C/sdb/",
-    "BACKUP_DIRECTORY2" : "/run/media/dvf1976/588ABAF68ABAD02C/sdc/",
-    "VIDEO_DIRECTORY" : "/run/media/dvf1976/588ABAF68ABAD02C/roku_videos/"
+    "DISC_IMAGES_DIRECTORY" : "/mnt/local_disc_images/",
+    "BACKUP_DIRECTORY" : "/mnt/backup/",
+    "VIDEO_DIRECTORY" : "/mnt/roku_videos/"
 }

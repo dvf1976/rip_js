@@ -9,12 +9,17 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "ascii-progress": "^1.0.5",
+    "async": "^2.6.0",
     "awesome-progress": "0.0.6",
     "collections": "^5.0.6",
     "config": "^1.25.1",
+    "future": "^2.3.1",
     "handbrake-js": "^2.1.0",
     "lodash": "^4.17.4",
     "minimist": "^1.2.0",
-    "progressbar": "^1.1.1"
+    "progress-stream": "^2.0.0",
+    "progressbar": "^1.1.1",
+    "sequence": "^3.0.0"
   }
 }

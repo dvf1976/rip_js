@@ -1,6 +1,5 @@
 {
     "DISC_IMAGES_DIRECTORY" : "/mnt/local_disc_images/",
-    "BACKUP_DIRECTORY1" : "/mnt/sdb/",
-    "BACKUP_DIRECTORY2" : "/mnt/sdc/",
+    "BACKUP_DIRECTORY" : "/mnt/backup/",
     "VIDEO_DIRECTORY" : "/mnt/roku_videos/"
 }
