@@ -35,29 +35,6 @@ var config = require('config'),
         'no-usage-stats' : '1',
         rate : '29.97'
     };
-    /*
-    copyDotDVDProgressBar = new ProgressBar({
-        schema: '[:bar] :current/:total :percent :elapseds :etas Copying ' + dotDVDFileName,
-        current: 0,
-        total: 100
-    }),
-    copyDotMD5ProgressBar = new ProgressBar({
-        schema: '[:bar] :current/:total :percent :elapseds :etas Copying ' + dotMD5FileName,
-        current: 0,
-        total: 100
-    }),
-    copyISOProgressBar = new ProgressBar({
-        schema: '[:bar] :current/:total :percent :elapseds :token1mins mins Copying ' + inputFileName,
-        current: 0,
-        total: 100
-    }),
-    getChaptersProgressBar = new ProgressBar({
-        schema: '[:bar] :current/:total :percent :elapseds :token1mins mins Scanning ' + outputFileName,
-        current: 0,
-        total: 100
-    });
-    */
-//require('events').EventEmitter.defaultMaxListeners = 0;
 
 function checkInputFileName(f) {
     console.log(DISC_IMAGES_DIRECTORY);
@@ -95,7 +72,7 @@ function getChapters(inputLocation, outputLocation) {
             params = {
                 input : inputLocation,
                 output : outputLocation,
-                'min-duration' : 1200,
+                'min-duration' : (60 * 18),
                 'no-usage-stats' : '1',
                 t : 0
             },
@@ -137,8 +114,7 @@ function runHandbrake(inputLocation, outputLocation, chapters) {
             output : outputLocation,
         },
         ripParams = _.extend({}, baseHandbrakeParams, fileParams),
-        paramsList = [],
-        progressBars = [];
+        paramsList = [];
         
     if (chapters.length === 0) {
         ripParams['main-feature'] = true;
@@ -147,20 +123,14 @@ function runHandbrake(inputLocation, outputLocation, chapters) {
         paramsList = _.map(chapters, function(chapterNumber, index) {
             return _.extend({}, ripParams, {
                 title : chapterNumber,
-                output : outputLocation.replace('DDD', index + 1) 
+                output : outputLocation.replace('DDD', _.padStart(index + 1, 3, '0')) 
             });
         });
     }
     
     hbjs._usage.disable();
     async.eachLimit(paramsList, 1, function (params, nextRip) {
-        /*
-        var ripVideoProgressBar = new ProgressBar({
-            schema: '[:bar] :current/:total :percent :elapseds :token1mins mins Ripping ' + params.output,
-            current: 0,
-            total: 100
-        });
-        */
+        var percentComplete = 0;
         console.log('params: ' + JSON.stringify(params));
 
         if (fs.existsSync(params.output)) {
@@ -174,14 +144,11 @@ function runHandbrake(inputLocation, outputLocation, chapters) {
         }).on('output', function (output) {
             // console.log('output: ' + output);
         }).on('progress', function (progress) {
-            if (progress) {
-                console.log(JSON.stringify(progress));
-            }
-            /*
-            ripVideoProgressBar.update(progress.percentComplete, {
-                token1mins: Math.round(progress.eta)
-            });
-            */
+            console.log('ripping: ' + JSON.stringify(progress));
+            //if ((progress) && (progress.taskCount === 2) && (progress.percentComplete !== percentComplete)) {
+            //    console.log('ripping to ' + params.output + ' ' + (progress.percentComplete) + '% done');
+            //    percentComplete = progress.percentComplete;
+            //}
         }).on('complete', function () {
             nextRip(null, params);
         });
@@ -191,27 +158,6 @@ function runHandbrake(inputLocation, outputLocation, chapters) {
         }
         console.log('error: ' + err);
     });
-
-    /*
-    _.each(iterativeParams, function (params) {
-        var ripVideoProgressBar = new ProgressBar({
-            schema: '[:bar] :current/:total :percent :elapseds :token1mins mins Ripping ' + params.output,
-            current: 0,
-            total: 100
-        });
-        console.log('params: ' + JSON.stringify(params));
-
-        hbjs.spawn(params).on('error', function (err) {
-            console.log('error: ' + err);
-        }).on('output', function (output) {
-            // console.log('output: ' + output);
-        }).on('progress', function (progress) {
-            ripVideoProgressBar.update(progress.percentComplete, {
-                token1mins: Math.round(progress.eta)
-            });
-        });
-    });
-    */
 }
 
 /*
@@ -250,10 +196,13 @@ function copyFile(source, target, progressBar) {
 */
 
 function copyFile(source, target) {
-    var readStream = fs.createReadStream(source),
+    var progress = require('progress-stream'),
+        readStream = fs.createReadStream(source),
         writeStream = fs.createWriteStream(target),
         stat = fs.statSync(source),
-        fileSize = stat.size;
+        fileSize = stat.size,
+        progressPercentage = 0,
+        progressStream = progress({length: fileSize, time: 100});
 
     writeStream.on("error", function(err) {
         reject(err);
@@ -271,16 +220,16 @@ function copyFile(source, target) {
         writeStream.close();
     });
 
-    readStream.pipe(writeStream);
+    progressStream.on('progress', function (progress) {
+        if (progressPercentage !== Number.parseInt(progress.percentage)) {
+            console.log('copying to ' + target + ' ' + (Number.parseInt(progress.percentage)) + '% done');
+            progressPercentage = Number.parseInt(progress.percentage);
+        }
+    });
+
+    readStream.pipe(progressStream).pipe(writeStream);
 }
 
-/*
-_.each([copyDotDVDProgressBar, copyDotMD5ProgressBar, copyISOProgressBar, getChaptersProgressBar, ripVideoProgressBar], function (pb) {
-    pb.update(0, {
-        token1mins: 0
-    });
-});
-*/
 // UGH. Need to rewrite as promises!
 getChapters(inputFileLocation, outputFileLocation).then(
     function (chapters) {
@@ -288,9 +237,13 @@ getChapters(inputFileLocation, outputFileLocation).then(
     }
 );
 // 
-// copyFile(dotMD5FileLocation, BACKUP_DIRECTORY + dotMD5FileName, copyDotMD5ProgressBar);
-// copyFile(inputFileLocation, BACKUP_DIRECTORY + inputFileName, copyISOProgressBar);
-// copyFile(dotDVDFileLocation, BACKUP_DIRECTORY + dotDVDFileName, copyDotDVDProgressBar);
+copyFile(dotMD5FileLocation, BACKUP_DIRECTORY + dotMD5FileName);
+if (fs.existsSync(BACKUP_DIRECTORY + inputFileName)) {
+    console.log('file already exists at: ' + BACKUP_DIRECTORY + inputFileName);
+} else {
+    copyFile(inputFileLocation, BACKUP_DIRECTORY + inputFileName);
+}
+copyFile(dotDVDFileLocation, BACKUP_DIRECTORY + dotDVDFileName);
 
 
 //watcher.on('add', processISO);
