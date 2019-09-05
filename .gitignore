@@ -1,2 +1,4 @@
 attic/*
 *.m4v
+node_modules/*
+*.sw[op]
