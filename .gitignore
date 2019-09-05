@@ -2,3 +2,5 @@ attic/*
 *.m4v
 node_modules/*
 *.sw[op]
+old*
+package-lock.json
