@@ -74,6 +74,43 @@ if (fs.existsSync(outputFileLocation)) {
 }
 
 function getChapterNumberToDuration(output) {
+    return new Promise(function(resolve, reject) {
+        var chapterNumberToDuration = {},
+            matchingChapter, durationHours, durationMinutes, durationSeconds, totalDuration;
+        // console.log('output: ' + output);
+        _.each(output.split('\n'), function (line) {
+            if (line.indexOf('+ title') === 0) {
+                matchingChapter = line.match(/\+ title (\d+)/)[1];
+                /*
+                console.log('matchingChapter: ' + matchingChapter);
+                */
+            }
+            if (line.indexOf('  + duration') === 0) {
+                /*
+                console.log('line: ' + line);
+                */
+                durationHours = parseInt(line.match(/  \+ duration: 0?(\d+):0?(\d+):0?(\d+)/)[1]);
+                durationMinutes = parseInt(line.match(/  \+ duration: 0?(\d+):0?(\d+):0?(\d+)/)[2]);
+                durationSeconds = parseInt(line.match(/  \+ duration: 0?(\d+):0?(\d+):0?(\d+)/)[3]);
+                /*
+                console.log('durationHours: ' + durationHours);
+                console.log('durationMinutes: ' + durationMinutes);
+                console.log('durationSeconds: ' + durationSeconds);
+                */
+
+                totalDuration = ((60 * 60) * durationHours) + (60 * durationMinutes) + durationSeconds;
+                /*
+                console.log('matchingChapter: ' + matchingChapter);
+                console.log('totalDuration: ' + totalDuration);
+                */
+                chapterNumberToDuration[matchingChapter] = totalDuration;
+            }
+        });
+
+        console.log('chapterNumberToDuration: ' + JSON.stringify(chapterNumberToDuration));
+
+        resolve(chapterNumberToDuration);
+    });
 }
 
 function getChapters(inputLocation, outputLocation) {
@@ -86,9 +123,7 @@ function getChapters(inputLocation, outputLocation) {
 		        //'max-duration' : (60 * 55),
                 'no-usage-stats' : '1',
                 t : 0
-            },
-            chapterNumberToDuration = {},
-            chapters = [];
+            };
 
         //hbjs._usage.disable();
 
@@ -99,74 +134,39 @@ function getChapters(inputLocation, outputLocation) {
         */
 
         if (mediaType !== 'tv') {
-            resolve(chapters);
+            resolve([]);
             return;
         }
 
         delete params['no-usage-stats']
         console.log('params: ' + JSON.stringify(params));
 
-        if (!argv.bluray) {
-            hbjs.exec(params, function (err, output, stderr) {
-                console.log('output: ' + output);
-                console.log('stderr: ' + stderr);
-            });
-        } else {
-            hbjs.spawn(params).on('error', function (err) {
-                console.log('error: ' + err);
-            }).on('output', function (output) {
-                var matchingChapter, durationHours, durationMinutes, durationSeconds, totalDuration;
-                console.log('output: ' + output);
-                _.each(output.split('\n'), function (line) {
-                    if (line.indexOf('+ title') === 0) {
-                        matchingChapter = line.match(/\+ title (\d+)/)[1];
-                        /*
-                        console.log('matchingChapter: ' + matchingChapter);
-                        */
-                    }
-                    if (line.indexOf('  + duration') === 0) {
-                        /*
-                        console.log('line: ' + line);
-                        */
-                        durationHours = parseInt(line.match(/  \+ duration: 0?(\d+):0?(\d+):0?(\d+)/)[1]);
-                        durationMinutes = parseInt(line.match(/  \+ duration: 0?(\d+):0?(\d+):0?(\d+)/)[2]);
-                        durationSeconds = parseInt(line.match(/  \+ duration: 0?(\d+):0?(\d+):0?(\d+)/)[3]);
-                        /*
-                        console.log('durationHours: ' + durationHours);
-                        console.log('durationMinutes: ' + durationMinutes);
-                        console.log('durationSeconds: ' + durationSeconds);
-                        */
+        hbjs.exec(params, function (err, output, stderr) {
+            getChapterNumberToDuration(stderr).then(
+                function (chapterNumberToDuration) {
+                    var chapters = [];
+                    _.each(_.keys(chapterNumberToDuration), function (chapterNumber) {
+                        // console.log(chapterNumber);
+                        if (chapterNumberToDuration[chapterNumber] < TV_SHOW_MAX_DURATION) {
+                            chapters.push(chapterNumber);
+                        }
+                    });
+                    /*
+                    console.log(chapters);
+                    */
 
-                        totalDuration = ((60 * 60) * durationHours) + (60 * durationMinutes) + durationSeconds;
-                        /*
-                        console.log('matchingChapter: ' + matchingChapter);
-                        console.log('totalDuration: ' + totalDuration);
-                        */
-                        chapterNumberToDuration[matchingChapter] = totalDuration;
-                    }
-                });
-            }).on('complete', function () {
-                // console.log(chapterNumberToDuration);
-                _.each(_.keys(chapterNumberToDuration), function (chapterNumber) {
-                    // console.log(chapterNumber);
-                    if (chapterNumberToDuration[chapterNumber] < TV_SHOW_MAX_DURATION) {
-                        chapters.push(chapterNumber);
-                    }
-                });
-                /*
-                console.log(chapters);
-                */
-
-                // chapters.push(matchingChapter);
-                resolve(chapters);
-            });
-        }
+                    // chapters.push(matchingChapter);
+                    resolve(chapters);
+                }
+            );
+            // console.log('output: ' + output);
+            // console.log('stderr: ' + stderr);
+        });
     });
 }
 
 function runHandbrake(inputLocation, outputLocation, chapters) {
     var hbjs = require('handbrake-js'),
-        current = -1,
         fileParams = {
             //'no-usage-stats' : '1',
             input : inputLocation,
