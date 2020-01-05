@@ -16,6 +16,7 @@ var config = require('config'),
     Set = require('collections/set'),
     async = require('async'),
     inputFileName = checkInputFileName(argv.input || argv.disc || argv.bluray || argv.iso || argv.inputFileName),
+    chapterNumberOverride = argv.chapterNumber,
     mediaType = (argv.media_type === 'tv' || argv['media-type'] === 'tv' || argv['mediaType'] === 'tv') ? 'tv' : 'movie',
     dotDVDFileName = inputFileName.replace('.iso', '.dvd'),
     dotMD5FileName = inputFileName.replace('.iso', '.md5'),
@@ -32,6 +33,7 @@ var config = require('config'),
         // 'keep-display-aspect' : true,
         // 'preset' : 'Roku 2160p60 4K HEVC Surround',
         'preset' : 'Apple 2160p60 4K HEVC Surround',
+        //'preset' : "dfHigh",
         'audio' : '1',
         //'chapters' : '1-3',
         //'preset' : 'Fast 1080p30',
@@ -133,6 +135,11 @@ function getChapters(inputLocation, outputLocation) {
         console.log('mediaType: ' + mediaType);
         */
 
+        if (chapterNumberOverride) {
+            resolve([parseInt(chapterNumberOverride, 10)]);
+            return;
+        }
+
         if (mediaType !== 'tv') {
             resolve([]);
             return;
@@ -166,12 +173,11 @@ function getChapters(inputLocation, outputLocation) {
 }
 
 function runHandbrake(inputLocation, outputLocation, chapters) {
-    var hbjs = require('handbrake-js'),
-        fileParams = {
+    var fileParams = {
             //'no-usage-stats' : '1',
             input : inputLocation,
             output : outputLocation,
-            verbose : 0
+            verbose : 1
         },
         ripParams = _.extend({}, baseHandbrakeParams, fileParams),
         paramsList = [];
@@ -190,50 +196,43 @@ function runHandbrake(inputLocation, outputLocation, chapters) {
 
     // hbjs._usage.disable();
     async.eachLimit(paramsList, 1, function (params, nextRip) {
-        var percentComplete, bar1;
+        var hbjs = require('handbrake-js'),
+            percentComplete, bar1,
+            fileName = params.output.split('/')[params.output.split('/').length - 1],
+            bar1 = new _cliProgress.Bar({
+                // format : ' |- Ripping ' + inputFileName + ' | {percentage}%' + ' - ' + '||{bar}||',
+                format : 'ripping track ' + params.title + ' => ' + fileName + ' [{bar}] {percentage}% || {value}/{total} Chunks',
+                barCompleteChar: '\u2588',
+                barIncompleteChar: '\u2591',
+                hideCursor : true
+            });
 
-        // console.log('params: ' + JSON.stringify(params));
-	// nextRip(null, params);
+        bar1.start(1000, 0);
+
+        console.log('fileName: ' + fileName);
+
         if (fs.existsSync(params.output)) {
             console.log('output already exists: ' + params.output);
             nextRip(null, params);
             return;
         }
 
-
         hbjs.spawn(params).on('error', function (err) {
             console.log('error: ' + err);
-        }).on('output', function (output) {
-            // console.log('output: ' + output);
         }).on('progress', function (progress) {
             // console.log('ripping: ' + JSON.stringify(progress));
             // if ((progress) && (progress.taskCount === 2) && (progress.percentComplete !== percentComplete)) {
             //    console.log('ripping to ' + params.output + ' ' + (progress.percentComplete) + '% done');
             //    percentComplete = progress.percentComplete;
             // }
-            if ((progress.taskCount === 2) && (!bar1)) {
-		bar1 = new _cliProgress.Bar({
-			// format : ' |- Ripping ' + inputFileName + ' | {percentage}%' + ' - ' + '||{bar}||',
-			format : 'ripping ' + inputFileName + ' [{bar}] {percentage}% || {value}/{total} Chunks || Speed: {speed}',
-			barCompleteChar: '\u2588',
-			barIncompleteChar: '\u2591',
-			hideCursor : true
-		    });
-
-		    //}, _cliProgress.Presets.shades_classic);
-
-		bar1.start(1000, 0);
-	    }
             if (parseInt(progress.percentComplete * 10, 10) !== percentComplete) {
-		/*
-		console.log('bar: ');
-		console.log(bar);
-		bar.tick(1);
-		*/
+                //console.log('bar: ');
+                //console.log(bar);
+                //bar.tick(1);
             	// console.log('ripping to ' + params.output + ' ' + (progress.percentComplete) + '% done');
 
             	percentComplete = parseInt(progress.percentComplete * 10);
-		bar1.update(percentComplete);
+		        bar1.update(percentComplete);
             }
         }).on('complete', function () {
             bar1.stop();

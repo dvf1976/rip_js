@@ -1,5 +1,5 @@
 {
     "DISC_IMAGES_DIRECTORY" : "/mnt/backup/",
     "BACKUP_DIRECTORY" : "/mnt/backup/",
-    "VIDEO_DIRECTORY" : "/home/dvf1976/roku_videos/"
+    "VIDEO_DIRECTORY" : "/mnt/roku_videos/"
 }
